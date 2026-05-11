@@ -1,70 +1,273 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
-   <title>CRUD Application</title>
+<meta charset="UTF-8">
+<title>CRUD with LocalStorage</title>
 
-</head>
-<body style="color:aquamarine; background-color: #1d2630;">
+<style>
+body{
+    font-family: Arial;
+    background:#1d2630;
+}
+
+.container{
+    width:80%;
+    margin:40px auto;
+    display:flex;
+    gap:20px;
+    text-align: center;
+}
+
+form{
+    flex:1;
+    background:rgb(136, 174, 239);
+    padding:30px;
+    border-radius:10px;
+}
+
+table{
+    width:100%;
+    background:#fff;
+    border-collapse: collapse;
     
-   <div class ="container mt-5">
-    <div class ="text-center">
-        <h1 class="display-5 mb-5"><strong>CRUD Application</strong></h1>
-    </div>
-    <div class="main row justify-content-center">
-        <form action="" id="student-form" class="row justify-content-center mb-4" autocomplete="off">
-          <div class="col-10 col-md-8 mb-3">
-          
-            <h2>First Name</h2>
-                <input class="form-control" id="firstName" type="text"  placeholder="Enter First name" />
-          </div>
-           <div class="col-10 col-md-8 mb-3">
-           
-            <h3>Last Name</h3>
-                <input class="form-control" id="lastName" type="text"  placeholder="Enter Last name" />
-          </div>
-           <div class="col-10 col-md-8 mb-3">
-           
-            <h4>Roll No</h4>
-                <input class="form-control" id="rollNo" type="text"  placeholder="Enter Roll No" />
+}
+.table-container{
+    flex:2;
+    width:100%
+    
+}
 
-          </div>
-          <div class="col-10 col-md-8 mt-5">
-                <input class="btn btn-success add-btn" type="submit" value="Submit">
+.table-title{
+    text-align:center;
+    margin-bottom:15px;
+    color:#52e0dc;
+    font-size:22px;
+}
 
-          </div> 
-        </form>
-           
-          <div class="col-12 col-md-10  mt-5">
-            <h5> Stored Data </h5>
-            <table class="table table-striped table-dark">
-                <thead>
-                    <tr>
-                     <th>First Name</th>
-                     <th>Last Name</th>
-                     <th>Roll No</th>
-                     <th>Actions</th>
-                    </tr>
-                </thead>
 
-                <tbody id="student-list">
-                    <tr>
-                        <td>Dear</td>
-                        <td>Programmer</td>
-                        <td>25</td>
-                        <td>
-                            <a href="#" class="btn btn-warning btn-sm edit">Edit</a>
-                            <a href="#" class="btn btn-danger btn-sm delete">Delete</a>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
-          </div>
-    </div>
+th, td{
+    border:1px solid black;
+    padding:15px;
+    text-align:center;
+    
+}
+
+th{
+    background:orange;
+    color:black;
+}
+
+input{
+    width:96%;
+    padding:10px;
+    margin:8px 0;
+    border-radius:9px;
+}
+
+.btn{
+    padding:6px 15px;
+    margin:5px;
+    border:none;
+    border-radius:6px;
+    color:black;
+    cursor:pointer;
+   font-size: medium;
+}
+
+
+.green{
+    background-color:#1ce893;
+}
+
+.green:hover{
+    background-color:#198754;
+}
+
+
+.red{
+    background-color:#dc3545;
+}
+
+.red:hover{
+    background-color:#c82333;
+}
+.search{
+    margin-bottom:10px;
+    border-radius:10px;
+    background:rgb(136, 174, 239);
+
+}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- FORM -->
+    <form onsubmit="onFormSubmit(event)">
+        <h2><strong>CRUD APPLICATION</strong></h2>
+
+        <input type="text" id="productCode" placeholder="Product Code" required>
+        <input type="text" id="product" placeholder="Product Name" required>
+        <input type="number" id="qty" placeholder="Quantity" required>
+        <input type="number" id="price" placeholder="Price" required>
+
+        <button type="submit" class="btn green">Save</button>
+        <button type="reset" class="btn red" onclick="resetForm()">Reset</button> 
+    </form>
+
+    <!-- TABLE -->
+    <div class="table-container">
+
+    <h2 class="table-title"><strong>Stored Product Data</strong></h2>
+
+    <input type="text" id="searchInput" placeholder="Search..." onkeyup="searchProducts()">
+
+    <table>
+        <thead>
+            <tr>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Qty</th>
+                <th>Price</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="storeList"></tbody>
+    </table>
+
    </div>
-    <script src="Script.js"></script>
-   
+
+</div>
+
+<script>
+
+let editID = null;
+
+// LOAD DATA
+window.onload = function(){
+    displayProducts();
+}
+
+// FORM SUBMIT
+function onFormSubmit(e){
+    e.preventDefault();
+
+    let product = {
+        id: editID || Date.now(),
+        code: document.getElementById("productCode").value,
+        name: document.getElementById("product").value,
+        qty: document.getElementById("qty").value,
+        price: document.getElementById("price").value
+    };
+
+    let products = JSON.parse(localStorage.getItem("products")) || [];
+
+    if(editID){
+        products = products.map(p => p.id === editID ? product : p);
+        alert("Product Updated Successfully!");
+        editID = null;
+    } else {
+        products.push(product);
+        alert("Product Added Successfully!");
+    }
+
+    localStorage.setItem("products", JSON.stringify(products));
+
+    resetForm();
+    displayProducts();
+}
+
+// DISPLAY
+function displayProducts(filtered = null){
+    let products = filtered || JSON.parse(localStorage.getItem("products")) || [];
+
+    let tbody = document.getElementById("storeList");
+    tbody.innerHTML = "";
+     
+    // if no data Exist 
+    if(products.length === 0){
+        let row = `
+            <tr>
+                 <td colspan="5" style="text-align:center; color:red; font-size:18px;">
+                    No Data Found
+                </td>
+            </tr>
+        `;
+        tbody.innerHTML = row;
+        return;
+    }
+    // if Data Exist
+    products.forEach(p=>{
+        let row = `
+        <tr>
+            <td>${p.code}</td>
+            <td>${p.name}</td>
+            <td>${p.qty}</td>
+            <td>${p.price}</td>
+            <td>
+                <button class="btn green" onclick="editProduct(${p.id})">Edit</button>
+               <button class="btn red" onclick="deleteProduct(${p.id})">Delete</button>
+
+            </td>
+        </tr>
+        `;
+        tbody.innerHTML += row;
+    });
+}
+
+// EDIT
+function editProduct(id){
+    let products = JSON.parse(localStorage.getItem("products")) || [];
+    let p = products.find(p => p.id === id);
+
+    document.getElementById("productCode").value = p.code;
+    document.getElementById("product").value = p.name;
+    document.getElementById("qty").value = p.qty;
+    document.getElementById("price").value = p.price;
+
+    editID = id;
+}
+
+// DELETE
+function deleteProduct(id){
+    let products = JSON.parse(localStorage.getItem("products")) || [];
+
+    products = products.filter(p => p.id !== id);
+
+    localStorage.setItem("products", JSON.stringify(products));
+
+    alert("Product Deleted Successfully!");
+    
+    displayProducts();
+}
+
+// SEARCH
+function searchProducts(){
+    let value = document.getElementById("searchInput").value.toLowerCase();
+
+    let products = JSON.parse(localStorage.getItem("products")) || [];
+
+    let filtered = products.filter(p =>
+        p.name.toLowerCase().includes(value) ||
+        p.code.toLowerCase().includes(value)
+    );
+
+    displayProducts(filtered);
+}
+
+// RESET
+function resetForm(){
+    document.getElementById("productCode").value = "";
+    document.getElementById("product").value = "";
+    document.getElementById("qty").value = "";
+    document.getElementById("price").value = "";
+    editID = null;
+}
+
+</script>
+
 </body>
 </html>
